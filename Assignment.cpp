@@ -1,19 +1,22 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 using namespace std;
 
 class Expense {
 public:
-    string title;
-    float cost;
-    string date; // Format: YYYY-MM-DD
+    string name;
+    float amount;
+    int day, month, year;
     Expense* next;
 
-    Expense(string t, float c, string d) {
-        title = t;
-        cost = c;
-        date = d;
-        next = NULL;
+    Expense(string n, float a, int d, int m, int y) {
+        name = n;
+        amount = a;
+        day = d;
+        month = m;
+        year = y;
+        next = nullptr;
     }
 };
 
@@ -21,158 +24,191 @@ class ExpenseTracker {
 private:
     Expense* head;
 
+    void saveExpenseToFile(Expense* exp) {
+        ofstream file("Expenses.txt", ios::app);
+        if (file.is_open()) {
+            file << exp->name << "," << exp->amount << "," 
+                 << exp->day << "," << exp->month << "," << exp->year << endl;
+            file.close();
+        }
+    }
+
 public:
     ExpenseTracker() {
-        head = NULL;
+        head = nullptr;
+        loadExpensesFromFile();
     }
 
-    // Add new expense
-    void addExpense(string title, float cost, string date) {
-        Expense* newExpense = new Expense(title, cost, date);
-        if (head == NULL) {
+    void addExpense() {
+        string name;
+        float amount;
+        int day, month, year;
+
+        cout << "Enter item name: ";
+        cin.ignore();
+        getline(cin, name);
+
+        cout << "Enter amount: ";
+        cin >> amount;
+
+        cout << "Enter date (day month year): ";
+        cin >> day >> month >> year;
+
+        Expense* newExpense = new Expense(name, amount, day, month, year);
+        newExpense->next = head;
+        head = newExpense;
+
+        saveExpenseToFile(newExpense);
+
+        cout << "Expense added and saved!\n";
+    }
+
+    void loadExpensesFromFile() {
+        ifstream file("expenses.txt");
+        if (!file.is_open()) return;
+
+        string name;
+        float amount;
+        int day, month, year;
+        char comma;
+
+        
+        while (getline(file, name, ',')) {
+            file >> amount >> comma >> day >> comma >> month >> comma >> year;
+            file.ignore();
+
+            Expense* newExpense = new Expense(name, amount, day, month, year);
+            newExpense->next = head;
             head = newExpense;
-        } else {
-            Expense* temp = head;
-            while (temp->next != NULL)
-                temp = temp->next;
-            temp->next = newExpense;
         }
-        cout << "✅ Expense added successfully!\n";
+
+        file.close();
     }
 
-    // View all expenses
-    void viewExpenses() {
-        if (head == NULL) {
-            cout << "❌ No expenses found.\n";
+    void showExpenses() {
+        if (!head) {
+            cout << "No expenses recorded.\n";
             return;
         }
+
         Expense* temp = head;
-        cout << "\n--- All Expenses ---\n";
-        while (temp != nullptr) {
-            cout << "Title: " << temp->title
-                 << ", Cost: Rs." << temp->cost
-                 << ", Date: " << temp->date << endl;
+        cout << "All Expenses:\n";
+        while (temp) {
+            cout << temp->day << "/" << temp->month << "/" << temp->year << " - "
+                 << temp->name << ": Rs. " << temp->amount << endl;
             temp = temp->next;
         }
     }
 
-    // Edit expense by title
-    void editExpense(string oldTitle, string newTitle, float newCost, string newDate) {
+    void showTotalExpense() {
+        float total = 0;
         Expense* temp = head;
-        while (temp != nullptr) {
-            if (temp->title == oldTitle) {
-                temp->title = newTitle;
-                temp->cost = newCost;
-                temp->date = newDate;
-                cout << "✏️ Expense updated successfully!\n";
-                return;
+
+        
+        while (temp) {
+            total += temp->amount;
+            temp = temp->next;
+        }
+
+        cout << "Total Expense: Rs. " << total << endl;
+    }
+
+    void showWeeklyReport() {
+        int weekDay, weekMonth, weekYear;
+        cout << "Enter starting day of week (day month year): ";
+        cin >> weekDay >> weekMonth >> weekYear;
+
+        cout << "Weekly Report:\n";
+
+        Expense* temp = head;
+        
+        while (temp) {
+            if (temp->year == weekYear && temp->month == weekMonth &&
+                (temp->day >= weekDay && temp->day < weekDay + 7)) {
+                cout << temp->day << "/" << temp->month << "/" << temp->year << " - "
+                     << temp->name << ": Rs. " << temp->amount << endl;
             }
             temp = temp->next;
         }
-        cout << "❌ Expense not found.\n";
     }
 
-    // Delete expense by title
-    void deleteExpense(string title) {
-        if (head == nullptr) return;
+    void showMonthlyReport() {
+        int month, year;
+        cout << "Enter month and year for report: ";
+        cin >> month >> year;
 
-        if (head->title == title) {
-            Expense* toDelete = head;
-            head = head->next;
-            delete toDelete;
-            cout << "🗑️ Expense deleted.\n";
+        cout << "Monthly Report:\n";
+
+        Expense* temp = head;
+        
+        while (temp) {
+            if (temp->month == month && temp->year == year) {
+                cout << temp->day << "/" << temp->month << "/" << temp->year << " - "
+                     << temp->name << ": Rs. " << temp->amount << endl;
+            }
+            temp = temp->next;
+        }
+    }
+
+    void showMostExpensive() {
+        if (!head) {
+            cout << "No expenses recorded.\n";
             return;
         }
 
         Expense* temp = head;
-        while (temp->next != nullptr && temp->next->title != title)
-            temp = temp->next;
-
-        if (temp->next != nullptr) {
-            Expense* toDelete = temp->next;
-            temp->next = toDelete->next;
-            delete toDelete;
-            cout << "🗑️ Expense deleted.\n";
-        } else {
-            cout << "❌ Expense not found.\n";
-        }
-    }
-
-    // Most expensive item
-    void mostExpensiveItem() {
-        if (head == nullptr) {
-            cout << "❌ No expenses.\n";
-            return;
-        }
-
         Expense* maxExpense = head;
-        Expense* temp = head->next;
 
-        while (temp != nullptr) {
-            if (temp->cost > maxExpense->cost)
+        
+        while (temp) {
+            if (temp->amount > maxExpense->amount) {
                 maxExpense = temp;
-            temp = temp->next;
-        }
-
-        cout << "💰 Most Expensive Item: "
-             << maxExpense->title << ", Rs." << maxExpense->cost
-             << " on " << maxExpense->date << endl;
-    }
-
-    // (Simple) Monthly report
-    void monthlyReport(string month) {
-        cout << "\n📅 Monthly Report for: " << month << endl;
-        Expense* temp = head;
-        float total = 0;
-        while (temp != nullptr) {
-            if (temp->date.substr(0, 7) == month) {
-                cout << temp->title << " - Rs." << temp->cost << " on " << temp->date << endl;
-                total += temp->cost;
             }
             temp = temp->next;
         }
-        cout << "Total Monthly Expense: Rs." << total << endl;
+
+        cout << "Most Expensive Item:\n";
+        cout << maxExpense->name << ": Rs. " << maxExpense->amount
+             << " on " << maxExpense->day << "/" << maxExpense->month << "/" << maxExpense->year << endl;
     }
 
-    // Weekly report (basic using date prefix)
-    void weeklyReport(string weekStartDate) {
-        cout << "\n🗓️ Weekly Report starting from: " << weekStartDate << endl;
-        Expense* temp = head;
-        float total = 0;
-        while (temp != nullptr) {
-            if (temp->date >= weekStartDate && temp->date <= getNext7Days(weekStartDate)) {
-                cout << temp->title << " - Rs." << temp->cost << " on " << temp->date << endl;
-                total += temp->cost;
-            }
-            temp = temp->next;
+    ~ExpenseTracker() {
+        Expense* current = head;
+        while (current) {
+            Expense* next = current->next;
+            delete current;
+            current = next;
         }
-        cout << "Total Weekly Expense: Rs." << total << endl;
-    }
-
-    // Fake 7 day forward function (static 7-day range, no date logic)
-    string getNext7Days(string startDate) {
-        // Just for simplicity: not actually calculating next 7 days
-        return startDate; // Placeholder, should implement real logic with <ctime>
     }
 };
+
 int main() {
     ExpenseTracker tracker;
-    tracker.addExpense("Groceries", 2500, "2025-05-10");
-    tracker.addExpense("Fuel", 1500, "2025-05-11");
-    tracker.addExpense("Gym", 3000, "2025-05-12");
+    int choice;
 
-    tracker.viewExpenses();
+    do {
+        cout << "\n--- Expense Tracker Menu ---\n";
+        cout << "1. Add Expense\n";
+        cout << "2. Show All Expenses\n";
+        cout << "3. Show Total Expense\n";
+        cout << "4. Show Weekly Report\n";
+        cout << "5. Show Monthly Report\n";
+        cout << "6. Most Expensive Item\n";
+        cout << "7. Exit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
 
-    tracker.editExpense("Fuel", "Petrol", 1700, "2025-05-13");
-
-    tracker.deleteExpense("Gym");
-
-    tracker.viewExpenses();
-
-    tracker.mostExpensiveItem();
-
-    tracker.monthlyReport("2025-05");
-    tracker.weeklyReport("2025-05-10");
+        switch (choice) {
+            case 1: tracker.addExpense(); break;
+            case 2: tracker.showExpenses(); break;
+            case 3: tracker.showTotalExpense(); break;
+            case 4: tracker.showWeeklyReport(); break;
+            case 5: tracker.showMonthlyReport(); break;
+            case 6: tracker.showMostExpensive(); break;
+            case 7: cout << "Exiting...\n"; break;
+            default: cout << "Invalid choice. Try again.\n";
+        }
+    } while (choice != 7);
 
     return 0;
 }
