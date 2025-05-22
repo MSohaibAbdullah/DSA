@@ -64,7 +64,7 @@ public:
     }
 
     void loadExpensesFromFile() {
-        ifstream file("expenses.txt");
+        ifstream file("Expenses.txt");
         if (!file.is_open()) return;
 
         string name;
